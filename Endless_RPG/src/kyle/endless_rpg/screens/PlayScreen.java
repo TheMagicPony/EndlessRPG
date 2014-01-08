@@ -3,12 +3,15 @@ package kyle.endless_rpg.screens;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Stack;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import kyle.endless_rpg.Entity;
+import kyle.endless_rpg.Quest;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
@@ -18,10 +21,19 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.List;
+import com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Slider;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
+import com.badlogic.gdx.scenes.scene2d.utils.Align;
+import com.badlogic.gdx.utils.Timer;
+import com.badlogic.gdx.utils.Timer.Task;
 
 public class PlayScreen implements Screen {
 	
@@ -32,27 +44,65 @@ public class PlayScreen implements Screen {
 	private Table table;
 	private Skin skin;
 	private TextureAtlas atlas;
-	private Slider experienceSlider;
 	
-	private ShapeRenderer experienceBar;
+	private TextField progressBar;
+	//private Label log;
+	private Stack stack;
+	private float delay = 1; //seconds
+	private ScrollPane scroll;
+	private List log;
+	private String[] logText;
+	int counter = 0;
+	
+	private float wait_time = 5f;
+	private float time = 0;
+	
+	private float questDuration = 0;
+	private float questTime = 0;
+	
+	
+	public void update(float deltaTime){
+		time += deltaTime;
+		if(time >= wait_time){
+			System.out.print("Waited\n");
+			time -= wait_time;
+		}
+	}
+	
+	public void questUpdate(float deltaTime){
+		questTime += deltaTime;
+		if(questTime >= questDuration){
+			
+			questTime -= questDuration;
+			playerEntity.questComplete(true);
+			
+		}
+
+	}
 	
 	@Override
 	public void render(float delta) {
 		Gdx.gl.glClearColor(1, 1, 1, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
+		if(!playerEntity.onQuest()){
+			Quest q = new Quest();
+			q.Create(playerEntity);
+			playerEntity.setQuest(q);
+			playerEntity.setQuestBool(true);
+			questDuration = playerEntity.getQuestDuration();
+			System.out.print("Quest duration " + playerEntity.getQuestDuration()+ "\n");
+		}
+		
+		questUpdate(delta);
+		//update(delta);
 		batch.begin();
 		batch.end();
-		
-		experienceBar.begin(ShapeType.Filled);
-		experienceBar.identity();
-		experienceBar.translate(20, 12, 2);
-		experienceBar.rotate(0, 0, 1, 90);
-		experienceBar.rect(50, 50, 50, 50);
-		experienceBar.end();
+
 	
 		stage.act(delta);
 		stage.draw();
+		Table.drawDebug(stage);
 	}
 
 	@Override
@@ -69,10 +119,36 @@ public class PlayScreen implements Screen {
 		Gdx.input.setInputProcessor(stage);
 		atlas = new TextureAtlas("ui/uiskin.atlas");
 		skin = new Skin(Gdx.files.internal("ui/uiskin.json"), atlas);
-		experienceBar = new ShapeRenderer();
-		
 
-		
+
+//		logText = new String[]{"0"};
+//		log = new List(logText, skin.get("black", ListStyle.class));
+//		scroll = new ScrollPane(log, skin);
+//
+//		Timer.schedule(new Task(){
+//			@Override
+//			public void run(){
+//				String[] tmp  = new String[logText.length+1];
+//				tmp[0] = Integer.toString(counter + 1);
+//				for(int i = 0; i < logText.length; i++){
+//					tmp[i+1] = logText[i];
+//
+//				}
+//				counter++;
+//				logText = new String[tmp.length];
+//				logText = tmp;
+//				log.setItems(logText);
+//			}
+//		}, delay, 1);	
+//
+//		table = new Table(skin);
+//		table.setFillParent(true);
+//		table.add(scroll);
+//		table.getCell(scroll).size(Gdx.graphics.getWidth()/4, 100).padBottom(20);	
+//		table.top().left();
+//
+//		stage.addActor(table);
+
 		JSONParser parser = new JSONParser();
 		try{
 			Object obj = parser.parse(new FileReader("../Endless_RPG-android/assets/testPlayer.json"));
@@ -91,7 +167,7 @@ public class PlayScreen implements Screen {
 			long cha = (Long) jsonObject.get("charisma");
 		
 			playerEntity.CreateCharacter(name, charClass, charRace, str, dex, intel, wis, con, cha);
-			
+			System.out.print("Character Loaded\n");
 		}catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -99,6 +175,8 @@ public class PlayScreen implements Screen {
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
+
+		
 	}
 
 	@Override

@@ -14,16 +14,60 @@ public class Entity {
 	private long baseHitpoints, baseMana, bonusHitpoints, bonusMana;
 	
 	private long defense, baseDefense;
-	private long experienceCurr, experienceToNextLevel, charLevel;
+	private double experienceCurr, experienceToNextLevel, charLevel;
 	private double attackPerSecond, damagePerSecond;
 	private double dodge, criticalChance, criticalMult, healthRegen, manaRegen;
 	private String characterClass;
 	private String characterRace;
 	
+	private boolean activeQuestBool;
+	private Quest currentQuest;
+	
+	private static final float base_xp = 50f;
+	private static final float factor_xp = 2.6f;
+	
 	private enum alighnment{
 		FRIENDLY, ENEMY, NEUTRAL;
 	}
 
+	public void questComplete(boolean q){
+		if(q){
+			experienceCurr += currentQuest.getExperience();
+			//System.out.print("You gain " + currentQuest.getExperience() + " experience points!\n");
+			System.out.print("Quest Complete!\n");
+			System.out.print(experienceCurr + " / " + experienceToNextLevel + "\n\n");
+			if(experienceCurr >= experienceToNextLevel){
+				System.out.print("Level up!\n");
+				LevelUp();
+				System.out.print("You're now level " + charLevel + "\n");
+			}
+			activeQuestBool = false;
+		}
+	}
+	
+	public void setQuestBool(boolean q){
+		activeQuestBool = q;
+	}
+	
+	public void setQuest(Quest q){
+		currentQuest = q;
+	}
+	
+	public double getExpTolevel(){
+		return experienceToNextLevel;
+	}
+	
+	public int getQuestDuration(){
+		return currentQuest.getDuration();
+	}
+	
+	public boolean onQuest(){
+		return activeQuestBool;
+	}
+	
+	public Quest getQuest(){
+		return currentQuest;
+	}
 	
 	public String getCharacterClass(){
 		return characterClass;
@@ -57,6 +101,10 @@ public class Entity {
 		return constitution;
 	}
 	
+	public double getLevel(){
+		return charLevel;
+	}
+	
 	public void CreateCharacter(String n, String c, String r, long str, long dex, long intel, long wis, long con, long cha){
 		name = n;
 		strength = str;
@@ -87,8 +135,13 @@ public class Entity {
 		baseMana = baseMana + ((int)Math.ceil((double)intelligence/2) - 5) + (int)Math.ceil((double)charLevel/2);
 		maxMana = baseMana + bonusMana;
 		
-		experienceToNextLevel = experienceToNextLevel*experienceToNextLevel - experienceToNextLevel;
-	
+		if(experienceCurr > experienceToNextLevel)
+			experienceCurr = experienceCurr - experienceToNextLevel;
+		else
+			experienceCurr = 0;
+		
+		experienceToNextLevel = base_xp * (Math.pow(charLevel+1, factor_xp));
+
 	}
 	
 	private void setRaceSelection(String r){
